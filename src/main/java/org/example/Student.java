@@ -1,9 +1,10 @@
 package org.example;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Student {
+public class Student implements Serializable {
     private String name;
     private String surname;
     private int ID;
@@ -31,6 +32,9 @@ public class Student {
     }
     public void add (Course course) {
         this.courses.add(course);
+    }
+    public void remove (Course course) {
+        this.courses.remove(course);
     }
     @Override
     public String toString () {

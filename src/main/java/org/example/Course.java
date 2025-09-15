@@ -1,9 +1,10 @@
 package org.example;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Course {
+public class Course implements Serializable {
     private String name;
     private String level;
     private Instructor instructor;
@@ -11,21 +12,16 @@ public class Course {
     private List <Student> students;
     private List <Lesson> lessons;
 
-    public Course (String name, String level, Instructor instructor, int limitOfPlaces) {
+    public Course (String name, String level, int limitOfPlaces, Instructor instructor) {
         this.name = name;
         this.level = level;
-        this.instructor = instructor;
         this.limitOfPlaces = limitOfPlaces;
+        this.instructor = instructor;
         this.students = new ArrayList<>();
         this.lessons = new ArrayList<>();
     }
-    public Course (String name, String level, int limitOfPlaces) {
-        this.name = name;
-        this.level = level;
-        this.instructor = null;
-        this.limitOfPlaces = limitOfPlaces;
-        this.students = new ArrayList<>();
-        this.lessons = new ArrayList<>();
+    public Course(String name, String level, int limitOfPlaces) {
+        this(name, level, limitOfPlaces, null);
     }
     public String getName() {
         return this.name;

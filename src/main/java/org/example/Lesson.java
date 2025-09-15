@@ -1,10 +1,11 @@
 package org.example;
 
+import java.io.Serializable;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Timer;
 
-public class Lesson {
+public class Lesson implements Serializable {
     private LocalDateTime localDateTime;
     private Duration duration;
     private Course course;
@@ -27,8 +28,11 @@ public class Lesson {
     public Duration getDuration () {
         return this.duration;
     }
-    public LocalDateTime getEndTime() {
+    public LocalDateTime getEndTime () {
         return localDateTime.plus(duration);
+    }
+    public Room getRoom() {
+        return room;
     }
     public void setCourse (Course course) {
         this.course = course;

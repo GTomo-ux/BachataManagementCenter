@@ -1,21 +1,25 @@
 package org.example;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Instructor {
+public class Instructor implements Serializable {
     private String name;
     private String surname;
     private int experience;
     private List <Course> courses;
 
-    public Instructor (String name, String surname,int experience) {
+    public Instructor (String name, String surname, int experience) {
         this.name = name;
         this.surname = surname;
         this.experience = experience;
         this.courses = new ArrayList<>();
     }
     public String getName () {
+        return this.name;
+    }
+    public String getSurname () {
         return this.name;
     }
     public int getExperience () {
