@@ -22,7 +22,7 @@ public class DanceSchool implements Serializable{
     private List<Instructor> instructors = new ArrayList<>();
     private List<Course> courses = new ArrayList<>();
     private List<Lesson> lessons = new ArrayList<>();
-    private static int studentID = 0;
+    private int nextStudentId = 0;
 
 
     private DanceSchool() {
@@ -47,9 +47,14 @@ public class DanceSchool implements Serializable{
 
 
     public void addStudent(Student student) {
-        if (!(students.contains(student))) {
-            student.setID(studentID++);
-            students.add(student);
+        if (student.getID() < 0) {
+            student.setID(nextStudentId++);
+        } else {
+            if (student.getID() >= nextStudentId) {
+                nextStudentId = student.getID() + 1;
+            }
+        }
+        if (this.students.add(student)) {
             studentMap.put(student.getID(), student);
         }
     }
@@ -69,7 +74,7 @@ public class DanceSchool implements Serializable{
                 if (lesson1.getRoom() == lesson.getRoom()) {
                     boolean overlap = !(lesson1.getEndTime().isBefore(lesson.getStartTime()) || lesson1.getStartTime().isAfter(lesson.getEndTime()));
                     if (overlap) {
-                        throw new ScheduleConflictException("Konflikt! Sala: " + lesson1.getRoom() + " jest już zajęta.");
+                        throw new ScheduleConflictException("Conflict! Room no. " + lesson1.getRoom().getID(lesson1.getRoom()) + " is already occupied.");
                     }
                 }
             }
@@ -87,7 +92,7 @@ public class DanceSchool implements Serializable{
                 writer.println(student.getName() + "," + student.getSurname() + "," + student.getID());
             }
         } catch (IOException e) {
-            System.out.println("Błąd zapisu studentów: " + e.getMessage());
+            System.out.println("Students enrollment error: " + e.getMessage());
         }
 
         // 2. Instruktorzy.
@@ -96,7 +101,7 @@ public class DanceSchool implements Serializable{
                 writer.println(instructor.getName() + "," + instructor.getSurname() + "," + instructor.getExperience());
             }
         } catch (IOException e) {
-            System.out.println("Błąd zapisu instruktorów: " + e.getMessage());
+            System.out.println("Instructors enrollment error: " + e.getMessage());
         }
 
         // 3. Kursy.
@@ -105,7 +110,7 @@ public class DanceSchool implements Serializable{
                 writer.println(course.getName() + "," + course.getLevel() + "," + course.getLimitOfPlaces());
             }
         } catch (IOException e) {
-            System.out.println("Błąd zapisu kursów: " + e.getMessage());
+            System.out.println("Courses enrollment error: " + e.getMessage());
         }
 
         // 4. Lekcje.
@@ -116,14 +121,14 @@ public class DanceSchool implements Serializable{
                         lesson.getRoom());
             }
         } catch (IOException e) {
-            System.out.println("Błąd zapisu lekcji:" + e.getMessage());
+            System.out.println("Lessons enrollment error: " + e.getMessage());
         }
 
         // Serializacja szkoły.
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("DanceSchool.ser"))) {
             oos.writeObject(this);
         } catch (IOException e) {
-            System.out.println("Błąd serializacji: " + e.getMessage());
+            System.out.println("Serialization error: " + e.getMessage());
         }
 
     }
@@ -136,7 +141,7 @@ public class DanceSchool implements Serializable{
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream("DanceSchool.ser"))) {
             return (DanceSchool) ois.readObject();
         } catch (Exception e) {
-            System.out.println("Nie udało się wczytać z serializacji, próbuje CSV...");
+            System.out.println("Failed to load from serialization, trying CSV...");
         }
 
         // 2. Wczytanie z CSV.
@@ -144,14 +149,21 @@ public class DanceSchool implements Serializable{
 
         // 2.1 Studenci.
         try (Scanner scanner = new Scanner(new File("Students"))) {
+            int maxId = -1;
             while (scanner.hasNextLine()) {
                 String[] parts = scanner.nextLine().split(",");
                 Student s = new Student(parts[0], parts[1]);
-                s.setID(Integer.valueOf(parts[2]));
-                ds.addStudent(s);
+                int id = Integer.valueOf(parts[2]);
+                s.setID(id);
+                ds.getStudents().add(s);
+                ds.studentMap.put(id,s);
+                if (id > maxId) {
+                    maxId = id;
+                }
             }
+            ds.nextStudentId = maxId + 1;
         } catch (Exception e) {
-            System.out.println("Błąd wczytywania studentów: " + e.getMessage());
+            System.out.println("Student loading error: " + e.getMessage());
         }
 
         // 2.2 Instruktorzy.
@@ -161,7 +173,7 @@ public class DanceSchool implements Serializable{
                 ds.addInstructor(new Instructor(parts[0], parts[1], Integer.valueOf(parts[2])));
             }
         } catch (Exception e) {
-            System.out.println("Błąd wczytywania instruktorów: " + e.getMessage());
+            System.out.println("Error loading instructors: " + e.getMessage());
         }
 
         // 2.3 Kursy.
@@ -171,7 +183,7 @@ public class DanceSchool implements Serializable{
                 ds.addCourse(new Course(parts[0], parts[1], Integer.valueOf(parts[2])));
             }
         } catch (Exception e) {
-            System.out.println("Błąd wczytywania kursów: " + e.getMessage());
+            System.out.println("Error loading courses: " + e.getMessage());
         }
 
         // 2.4 Lekcje.
@@ -184,7 +196,7 @@ public class DanceSchool implements Serializable{
                 ds.addLesson(new Lesson(start, duration, room));
             }
         } catch (Exception e) {
-            System.out.println("Błąd wczytywania lekcji: " + e.getMessage());
+            System.out.println("Error loading lessons: " + e.getMessage());
         }
 
         return ds;
@@ -199,7 +211,7 @@ public class DanceSchool implements Serializable{
             }
         }
         if (index == -1) {
-            throw new IllegalArgumentException("Nie znaleziono kursu o nazwie: " + name);
+            throw new IllegalArgumentException("\n" + "No course named: " + name);
         }
 
         if (!(this.courses.get(index).getLessons().contains(lesson))) {
@@ -221,11 +233,14 @@ public class DanceSchool implements Serializable{
             }
         }
         if (index == -1) {
-            throw new IllegalArgumentException("Nie znaleziono kursu o nazwie: " + name);
+            throw new IllegalArgumentException("\n" + "No course named: " + name);
+        }
+        if (this.courses.get(index).getStudents().contains(student)) {
+            return;
         }
 
         if (this.courses.get(index).getStudents().size() >= this.courses.get(index).getLimitOfPlaces()) {
-            throw new CourseFullException("Kurs jest już pełny!");
+            throw new CourseFullException("The course is now full!");
         }
         if (index != -1) {
             student.add(this.courses.get(index));
@@ -241,22 +256,24 @@ public class DanceSchool implements Serializable{
         for (int i = 0; i <this.courses.size(); i++) {
             if (this.courses.get(i).getName().equals(name)) {
                 index = i;
+                break;
             }
         }
         if (index == -1) {
-            throw new IllegalArgumentException("Nie znaleziono kursu o nazwie: " + name);
+            throw new IllegalArgumentException("No course named: " + name);
         }
         int studentNumber = -1;
         for (int i = 0; i < this.courses.get(index).getStudents().size(); i++) {
             if (this.courses.get(index).getStudents().get(i).getName().equals(student.getName()) &&this.courses.get(index).getStudents().get(i).getSurname().equals(student.getSurname())) {
                 studentNumber = i;
+                break;
             }
         }
         if (studentNumber == -1) {
-            throw new NotEnrolledException("Student nie był zapisany na ten kurs, więc nie można go usunąć!");
+            throw new NotEnrolledException("The student was not enrolled in this course, so the student cannot be removed!");
         }
         student.remove(this.courses.get(index));
-        this.courses.remove(student);
+        this.courses.get(index).getStudents().remove(studentNumber);
 
 
     }
@@ -269,7 +286,7 @@ public class DanceSchool implements Serializable{
             }
         }
         if (index == -1) {
-            throw new IllegalArgumentException("Nie znaleziono kursu o nazwie: " + name);
+            throw new IllegalArgumentException("No course named: " + name);
         }
         if (index != -1) {
             if (this.courses.get(index).getInstructor() == null) {
@@ -279,6 +296,10 @@ public class DanceSchool implements Serializable{
         }
 
     }
+
+
+    // API Statistics methods
+
 
 
 }

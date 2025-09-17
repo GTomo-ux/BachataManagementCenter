@@ -15,10 +15,10 @@ public class Main {
         Student s1 = new Student("Michał", "Bieniek");
         Student s2 = new Student("Ewa", "Jancz");
 
-        Instructor i1 = new Instructor("Kuba", "Gerula", 4);
+        Instructor i1 = new Instructor("Claudio", "Mineo", 20);
 
-        Course c1 = new Course("Bachata Sensual", "Intermediate", 60);
-        Course c2 = new Course("Bachata Sensual", "Basic", 80, i1);
+        Course c1 = new Course("Bachata Fusion", "Intermediate", 60, i1);
+        Course c2 = new Course("Bachata", "Basic", 80, i1);
 
         ds.addStudent(s1);
         ds.addStudent(s2);

@@ -7,7 +7,7 @@ import java.util.List;
 public class Student implements Serializable {
     private String name;
     private String surname;
-    private int ID;
+    private int ID = -1;
     private List <Course> courses;
 
     public Student (String name, String surname) {
@@ -21,7 +21,7 @@ public class Student implements Serializable {
     public String getSurname() {
         return this.surname;
     }
-    public void setID (int ID) {
+    void setID (int ID) {
         this.ID = ID;
     }
     public int getID() {
@@ -39,6 +39,18 @@ public class Student implements Serializable {
     @Override
     public String toString () {
         return this.name + " " + this.surname + ", ID: " + this.ID;
+    }
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Student)) return false;
+        Student that = (Student) o;
+        return this.ID == that.ID;
+    }
+
+    @Override
+    public int hashCode() {
+        return Integer.hashCode(ID);
     }
 
 

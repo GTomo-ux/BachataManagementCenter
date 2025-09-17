@@ -52,6 +52,6 @@ public class Course implements Serializable {
     }
     @Override
     public String toString () {
-        return this.name + ", " + this.level + ", limit miejsc: " + this.limitOfPlaces;
+        return this.name + ", " + this.level + ", limit of places: " + this.limitOfPlaces;
     }
 }

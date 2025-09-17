@@ -33,7 +33,7 @@ public class Instructor implements Serializable {
     }
     @Override
     public String toString () {
-        return this.name + " " + this.surname + ", " + this.experience + " lat doświadczenia";
+        return this.name + " " + this.surname + ", " + this.experience + " years of experience.";
     }
 
 }

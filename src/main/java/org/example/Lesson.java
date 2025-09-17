@@ -43,6 +43,22 @@ public class Lesson implements Serializable {
     public int getNumberOfStudents () {
         return this.numberOfStudents;
     }
+    @Override
+    public String toString () {
+        if (this.course == null) {
+            if (this.room == Room.ROOM1) {
+                return "Lesson on " + this.getStartTime() + ", lasting " + this.getDuration() + " minutes, in the room no. 1.";
+            } else {
+                return "Lesson on " + this.getStartTime() + ", lasting " + this.getDuration() + " minutes, in the room no. 2.";
+            }
+        } else {
+            if (this.room == Room.ROOM1) {
+                return this.course.getName() + " lesson " + " on " + this.getStartTime() + ", lasting " + this.getDuration() + " minutes, in the room no. 1.";
+            } else {
+                return this.course.getName() + " lesson " + " on " + this.getStartTime() + ", lasting " + this.getDuration() + " minutes, in the room no. 2.";
+            }
+        }
+    }
 
 
 
