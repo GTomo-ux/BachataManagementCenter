@@ -4,7 +4,10 @@ import org.example.exceptions.CourseFullException;
 
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.util.Scanner;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static java.util.Map.Entry.comparingByValue;
 
 
 public class Main {
@@ -12,33 +15,35 @@ public class Main {
 
         DanceSchool ds = DanceSchool.loadData();
 
-        Student s1 = new Student("Michał", "Bieniek");
-        Student s2 = new Student("Ewa", "Jancz");
-
-        Instructor i1 = new Instructor("Claudio", "Mineo", 20);
-
-        Course c1 = new Course("Bachata Fusion", "Intermediate", 60, i1);
-        Course c2 = new Course("Bachata", "Basic", 80, i1);
-
-        ds.addStudent(s1);
-        ds.addStudent(s2);
-        ds.addInstructor(i1);
-        ds.addCourse(c1);
-        ds.addCourse(c2);
-
-        System.out.println("Studenci:");
-        for (Student s : ds.getStudents()) {
-            System.out.println(s);
-        }
-
-        System.out.println("\nKursy:");
-        for (Course c : ds.getCourses()) {
-            System.out.println(c);
-        }
 
         ds.saveData();
 
-        System.out.println("\n✅ Dane zapisane!");
+
+
+        Map<String,Integer> scores = Map.of("Ala",90,"Ola",72,"Jan",95,"Piotr",60);
+
+        List<String> names = scores.entrySet().stream()
+                .filter(n -> n.getValue() >= 80)
+                .map(n -> n.getKey())
+                .sorted()
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        Optional<String> topName = scores.entrySet().stream()
+                .max(comparingByValue())
+                .map(Map.Entry::getKey);
+
+        List<Map.Entry<String,Integer>> reverseValue = scores.entrySet().stream()
+                .sorted(Map.Entry.<String,Integer>comparingByValue().reversed())
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        /* Map<String, Integer> newScores = scores.entrySet().stream()
+                        .map(c -> c.getValue() + 5)
+                                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, TreeMap::new));
+
+        System.out.println(reverseValue);
+
+        */
+
 
 
 

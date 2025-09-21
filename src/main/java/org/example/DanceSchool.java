@@ -12,6 +12,8 @@ import java.util.Scanner;
 import java.nio.file.Paths;
 import java.util.*;
 import java.io.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class DanceSchool implements Serializable{
 
@@ -299,6 +301,69 @@ public class DanceSchool implements Serializable{
 
 
     // API Statistics methods
+    public String stat (StatType type) {
+        switch (type) {
+            case MOST_POPULAR_INSTRUCTOR: return mostPopularInstructor();
+            case MOST_ACTIVE_STUDENT: return mostActiveStudent();
+            case TOP_COURSES: return topCourses();
+            default: return "Unknown query.";
+        }
+    }
+    public String mostPopularInstructor () {
+        if (this.courses.isEmpty()) {
+            return "No data about courses.";
+        }
+        Map<Instructor,Integer> byInstructor = this.courses.stream()
+                .filter(course -> course.getInstructor() != null)
+                .collect(
+                        Collectors.toMap(
+                                Course::getInstructor,
+                                c->c.getStudents() == null ? 0 : c.getStudents().size(),
+                                Integer::sum,
+                                HashMap::new
+                        )
+                );
+
+        List<Map.Entry<Instructor,Integer>> sorted = byInstructor.entrySet().stream()
+                .sorted(Map.Entry.<Instructor,Integer>comparingByValue(java.util.Comparator.reverseOrder()))
+                .toList();
+
+        if (sorted.isEmpty()) return "No course has an assigned instructor.";
+
+        Map.Entry<Instructor,Integer> top = sorted.get(0);
+        Instructor i = top.getKey();
+        return i.getName() + " " + i.getSurname() + " — " + top.getValue() + " registrations";
+
+
+
+
+    }
+    public String mostActiveStudent () {
+
+        Map <Student, Integer> byStudent = this.students.stream()
+                .collect(Collectors.toMap(Function.identity(), student -> student.getCourses() == null ? 0 : student.getCourses().size()));
+
+        List<Map.Entry<Student, Integer>> sorted = byStudent.entrySet().stream()
+                .sorted(Map.Entry.<Student,Integer> comparingByValue().reversed())
+                .collect(Collectors.toList());
+        Student best = sorted.get(0).getKey();
+        int howManyCourses = sorted.get(0).getValue();
+
+        return best.getName() + " " + best.getSurname() + " - enrolled in " + howManyCourses + " courses";
+
+    }
+    public String topCourses () {
+        Map <Course, Integer> byCourses = this.courses.stream()
+                .collect(Collectors.toMap(Function.identity(), course -> course.getStudents() == null ? 0 : course.getStudents().size()));
+        List<Map.Entry<Course, Integer>> sorted = byCourses.entrySet().stream()
+                .sorted(Map.Entry.<Course, Integer>comparingByValue().reversed())
+                .collect(Collectors.toList());
+
+        return "Top 3 most popular courses: \n" +
+                "1. " + sorted.get(0).getKey().getName() + ", " + sorted.get(0).getKey().getLevel() + " - " + sorted.get(0).getValue() + " enrolled students\n" +
+                "2. " + sorted.get(1).getKey().getName() + ", " + sorted.get(1).getKey().getLevel() + " - " + sorted.get(1).getValue() + " enrolled students\n" +
+                "3. " + sorted.get(2).getKey().getName() + ", " + sorted.get(2).getKey().getLevel() + " - " + sorted.get(2).getValue() + " enrolled students";
+    }
 
 
 
