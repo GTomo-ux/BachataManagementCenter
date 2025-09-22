@@ -1,370 +1,68 @@
 package org.example;
 
 
-import org.example.exceptions.CourseFullException;
-import org.example.exceptions.NotEnrolledException;
-import org.example.exceptions.ScheduleConflictException;
-
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Scanner;
-import java.nio.file.Paths;
+import java.io.Serializable;
 import java.util.*;
-import java.io.*;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 public class DanceSchool implements Serializable{
 
     private static final long serialVersionUID = 1L;
-    private static final DanceSchool instance = new DanceSchool();
-    private Set<Student> students = new HashSet<>();
-    private Map<Integer, Student> studentMap = new HashMap<>();
-    private List<Instructor> instructors = new ArrayList<>();
-    private List<Course> courses = new ArrayList<>();
-    private List<Lesson> lessons = new ArrayList<>();
-    private int nextStudentId = 0;
+    private static final DanceSchool INSTANCE = new DanceSchool();
 
+    private final Set<Student> students = new HashSet<>();
+    private final Map<Integer, Student> studentMap = new HashMap<>();
+    private final List<Instructor> instructors = new ArrayList<>();
+    private final List<Course> courses = new ArrayList<>();
+    private final List<Lesson> lessons = new ArrayList<>();
 
-    private DanceSchool() {
-    }
+    private DanceSchool() {}
 
+    public static DanceSchool getInstance() { return INSTANCE; }
 
-    public static DanceSchool getInstance() {
-        return instance;
-    }
-    public Set<Student> getStudents () {
-        return this.students;
-    }
-    public List<Instructor> getInstructors () {
-        return this.instructors;
-    }
-    public List<Course> getCourses () {
-        return this.courses;
-    }
-    public List<Lesson> getLessons () {
-        return this.lessons;
-    }
+    // Gettery (dla prostoty – zwracamy „gołe” kolekcje jak u Ciebie)
+    public Set<Student> getStudents () { return this.students; }
+    public List<Instructor> getInstructors () { return this.instructors; }
+    public List<Course> getCourses () { return this.courses; }
+    public List<Lesson> getLessons () { return this.lessons; }
 
-
+    // Proste "public" add – BEZ walidacji (waliduje serwis)
     public void addStudent(Student student) {
-        if (student.getID() < 0) {
-            student.setID(nextStudentId++);
-        } else {
-            if (student.getID() >= nextStudentId) {
-                nextStudentId = student.getID() + 1;
-            }
-        }
-        if (this.students.add(student)) {
-            studentMap.put(student.getID(), student);
-        }
+        this.students.add(student);
+        this.studentMap.put(student.getID(), student);
     }
-    public void addInstructor (Instructor instructor) {
-        if (!(this.instructors.contains(instructor))) {
-            this.instructors.add(instructor);
-        }
+    public void addInstructor(Instructor instructor) {
+        if (!this.instructors.contains(instructor)) this.instructors.add(instructor);
     }
-    public void addCourse (Course course) {
-        if (!(courses.contains(course))) {
-            courses.add(course);
-        }
-    }
-    public void addLesson (Lesson lesson) throws ScheduleConflictException {
-        if (!(this.lessons.contains(lesson))) {
-            for (Lesson lesson1: this.lessons) {
-                if (lesson1.getRoom() == lesson.getRoom()) {
-                    boolean overlap = !(lesson1.getEndTime().isBefore(lesson.getStartTime()) || lesson1.getStartTime().isAfter(lesson.getEndTime()));
-                    if (overlap) {
-                        throw new ScheduleConflictException("Conflict! Room no. " + lesson1.getRoom().getID(lesson1.getRoom()) + " is already occupied.");
-                    }
-                }
-            }
-            this.lessons.add(lesson);
-        }
+    public void addCourse(Course course) {
+        if (!this.courses.contains(course)) this.courses.add(course);
     }
 
-    // ZAPIS
-    public void saveData () {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-
-        // 1. Studenci
-        try (PrintWriter writer = new PrintWriter(new FileWriter("Students"))) {
-            for (Student student: this.students) {
-                writer.println(student.getName() + "," + student.getSurname() + "," + student.getID());
-            }
-        } catch (IOException e) {
-            System.out.println("Students enrollment error: " + e.getMessage());
-        }
-
-        // 2. Instruktorzy.
-        try (PrintWriter writer = new PrintWriter(new FileWriter("Instructors"))) {
-            for (Instructor instructor: this.instructors) {
-                writer.println(instructor.getName() + "," + instructor.getSurname() + "," + instructor.getExperience());
-            }
-        } catch (IOException e) {
-            System.out.println("Instructors enrollment error: " + e.getMessage());
-        }
-
-        // 3. Kursy.
-        try (PrintWriter writer = new PrintWriter(new FileWriter("Courses"))) {
-            for (Course course: this.courses) {
-                writer.println(course.getName() + "," + course.getLevel() + "," + course.getLimitOfPlaces());
-            }
-        } catch (IOException e) {
-            System.out.println("Courses enrollment error: " + e.getMessage());
-        }
-
-        // 4. Lekcje.
-        try (PrintWriter writer = new PrintWriter(new FileWriter("Lessons"))) {
-            for (Lesson lesson: this.lessons) {
-                writer.println(lesson.getStartTime().format(formatter) + "," +
-                        lesson.getDuration().toMinutes() + "," +
-                        lesson.getRoom());
-            }
-        } catch (IOException e) {
-            System.out.println("Lessons enrollment error: " + e.getMessage());
-        }
-
-        // Serializacja szkoły.
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("DanceSchool.ser"))) {
-            oos.writeObject(this);
-        } catch (IOException e) {
-            System.out.println("Serialization error: " + e.getMessage());
-        }
-
+    // Lekcję dodajemy bez logiki kolizji - tę robi serwis
+    void addLessonInternal(Lesson lesson) {
+        if (!this.lessons.contains(lesson)) this.lessons.add(lesson);
     }
 
-    // WCZYTYWANIE
-    public static DanceSchool loadData () {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-
-        // 1. Próba serializacji.
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream("DanceSchool.ser"))) {
-            return (DanceSchool) ois.readObject();
-        } catch (Exception e) {
-            System.out.println("Failed to load from serialization, trying CSV...");
-        }
-
-        // 2. Wczytanie z CSV.
-        DanceSchool ds = getInstance();
-
-        // 2.1 Studenci.
-        try (Scanner scanner = new Scanner(new File("Students"))) {
-            int maxId = -1;
-            while (scanner.hasNextLine()) {
-                String[] parts = scanner.nextLine().split(",");
-                Student s = new Student(parts[0], parts[1]);
-                int id = Integer.valueOf(parts[2]);
-                s.setID(id);
-                ds.getStudents().add(s);
-                ds.studentMap.put(id,s);
-                if (id > maxId) {
-                    maxId = id;
-                }
-            }
-            ds.nextStudentId = maxId + 1;
-        } catch (Exception e) {
-            System.out.println("Student loading error: " + e.getMessage());
-        }
-
-        // 2.2 Instruktorzy.
-        try (Scanner sc = new Scanner(new File("Instructors"))) {
-            while (sc.hasNextLine()) {
-                String[] parts = sc.nextLine().split(",");
-                ds.addInstructor(new Instructor(parts[0], parts[1], Integer.valueOf(parts[2])));
-            }
-        } catch (Exception e) {
-            System.out.println("Error loading instructors: " + e.getMessage());
-        }
-
-        // 2.3 Kursy.
-        try (Scanner sc = new Scanner(new File("Courses"))) {
-            while (sc.hasNextLine()) {
-                String[] parts = sc.nextLine().split(",");
-                ds.addCourse(new Course(parts[0], parts[1], Integer.valueOf(parts[2])));
-            }
-        } catch (Exception e) {
-            System.out.println("Error loading courses: " + e.getMessage());
-        }
-
-        // 2.4 Lekcje.
-        try (Scanner sc = new Scanner(new File("Lessons"))) {
-            while (sc.hasNextLine()) {
-                String[] parts = sc.nextLine().split(",");
-                LocalDateTime start = LocalDateTime.parse(parts[0], formatter);
-                Duration duration = Duration.ofMinutes(Long.parseLong(parts[1]));
-                Room room = Room.valueOf(parts[2].trim());
-                ds.addLesson(new Lesson(start, duration, room));
-            }
-        } catch (Exception e) {
-            System.out.println("Error loading lessons: " + e.getMessage());
-        }
-
-        return ds;
+    // Pomocnicze do odczytu po ID i resetu stanu (używa serwis przy load)
+    Student findStudentById(int id) {
+        return studentMap.get(id);
     }
 
-    public void addLessonToTheCourse (Lesson lesson, String name) {
-        int index = -1;
-        for (int i = 0; i < this.courses.size(); i++) {
-            if (this.courses.get(i).getName().equals(name)) {
-                index = i;
-                break;
-            }
-        }
-        if (index == -1) {
-            throw new IllegalArgumentException("\n" + "No course named: " + name);
-        }
-
-        if (!(this.courses.get(index).getLessons().contains(lesson))) {
-            if ((lesson.getCourse() == null)) {
-                lesson.setCourse(this.courses.get(index));
-                this.courses.get(index).addLesson(lesson);
-            }
-
-        }
+    void clearAll() {
+        students.clear();
+        studentMap.clear();
+        instructors.clear();
+        courses.clear();
+        lessons.clear();
     }
 
-
-    public void studentToTheCourse (Student student, String name) throws CourseFullException {
-        int index = -1;
-        for (int i = 0; i < this.courses.size(); i++) {
-            if (this.courses.get(i).getName().equals(name)) {
-                index = i;
-                break;
-            }
-        }
-        if (index == -1) {
-            throw new IllegalArgumentException("\n" + "No course named: " + name);
-        }
-        if (this.courses.get(index).getStudents().contains(student)) {
-            return;
-        }
-
-        if (this.courses.get(index).getStudents().size() >= this.courses.get(index).getLimitOfPlaces()) {
-            throw new CourseFullException("The course is now full!");
-        }
-        if (index != -1) {
-            student.add(this.courses.get(index));
-            this.courses.get(index).addStudent(student);
-        }
-
-
-
-
+    // Używane przy wczytywaniu z plików przez serwis:
+    void addStudentInternal(Student s) {
+        this.students.add(s);
+        this.studentMap.put(s.getID(), s);
     }
-    public void removeStudentFromCourse (Student student, String name) throws NotEnrolledException {
-        int index = -1;
-        for (int i = 0; i <this.courses.size(); i++) {
-            if (this.courses.get(i).getName().equals(name)) {
-                index = i;
-                break;
-            }
-        }
-        if (index == -1) {
-            throw new IllegalArgumentException("No course named: " + name);
-        }
-        int studentNumber = -1;
-        for (int i = 0; i < this.courses.get(index).getStudents().size(); i++) {
-            if (this.courses.get(index).getStudents().get(i).getName().equals(student.getName()) &&this.courses.get(index).getStudents().get(i).getSurname().equals(student.getSurname())) {
-                studentNumber = i;
-                break;
-            }
-        }
-        if (studentNumber == -1) {
-            throw new NotEnrolledException("The student was not enrolled in this course, so the student cannot be removed!");
-        }
-        student.remove(this.courses.get(index));
-        this.courses.get(index).getStudents().remove(studentNumber);
-
-
-    }
-    public void instructorToTheCourse (Instructor instructor, String name) {
-        int index = -1;
-        for (int i = 0; i < this.courses.size(); i++) {
-            if (this.courses.get(i).getName().equals(name)) {
-                index = i;
-                break;
-            }
-        }
-        if (index == -1) {
-            throw new IllegalArgumentException("No course named: " + name);
-        }
-        if (index != -1) {
-            if (this.courses.get(index).getInstructor() == null) {
-                instructor.add(this.courses.get(index));
-                this.courses.get(index).setInstructor(instructor);
-            }
-        }
-
-    }
-
-
-    // API Statistics methods
-    public String stat (StatType type) {
-        switch (type) {
-            case MOST_POPULAR_INSTRUCTOR: return mostPopularInstructor();
-            case MOST_ACTIVE_STUDENT: return mostActiveStudent();
-            case TOP_COURSES: return topCourses();
-            default: return "Unknown query.";
-        }
-    }
-    public String mostPopularInstructor () {
-        if (this.courses.isEmpty()) {
-            return "No data about courses.";
-        }
-        Map<Instructor,Integer> byInstructor = this.courses.stream()
-                .filter(course -> course.getInstructor() != null)
-                .collect(
-                        Collectors.toMap(
-                                Course::getInstructor,
-                                c->c.getStudents() == null ? 0 : c.getStudents().size(),
-                                Integer::sum,
-                                HashMap::new
-                        )
-                );
-
-        List<Map.Entry<Instructor,Integer>> sorted = byInstructor.entrySet().stream()
-                .sorted(Map.Entry.<Instructor,Integer>comparingByValue(java.util.Comparator.reverseOrder()))
-                .toList();
-
-        if (sorted.isEmpty()) return "No course has an assigned instructor.";
-
-        Map.Entry<Instructor,Integer> top = sorted.get(0);
-        Instructor i = top.getKey();
-        return i.getName() + " " + i.getSurname() + " — " + top.getValue() + " registrations";
-
-
-
-
-    }
-    public String mostActiveStudent () {
-
-        Map <Student, Integer> byStudent = this.students.stream()
-                .collect(Collectors.toMap(Function.identity(), student -> student.getCourses() == null ? 0 : student.getCourses().size()));
-
-        List<Map.Entry<Student, Integer>> sorted = byStudent.entrySet().stream()
-                .sorted(Map.Entry.<Student,Integer> comparingByValue().reversed())
-                .collect(Collectors.toList());
-        Student best = sorted.get(0).getKey();
-        int howManyCourses = sorted.get(0).getValue();
-
-        return best.getName() + " " + best.getSurname() + " - enrolled in " + howManyCourses + " courses";
-
-    }
-    public String topCourses () {
-        Map <Course, Integer> byCourses = this.courses.stream()
-                .collect(Collectors.toMap(Function.identity(), course -> course.getStudents() == null ? 0 : course.getStudents().size()));
-        List<Map.Entry<Course, Integer>> sorted = byCourses.entrySet().stream()
-                .sorted(Map.Entry.<Course, Integer>comparingByValue().reversed())
-                .collect(Collectors.toList());
-
-        return "Top 3 most popular courses: \n" +
-                "1. " + sorted.get(0).getKey().getName() + ", " + sorted.get(0).getKey().getLevel() + " - " + sorted.get(0).getValue() + " enrolled students\n" +
-                "2. " + sorted.get(1).getKey().getName() + ", " + sorted.get(1).getKey().getLevel() + " - " + sorted.get(1).getValue() + " enrolled students\n" +
-                "3. " + sorted.get(2).getKey().getName() + ", " + sorted.get(2).getKey().getLevel() + " - " + sorted.get(2).getValue() + " enrolled students";
-    }
-
+    void addInstructorInternal(Instructor i) { addInstructor(i); }
+    void addCourseInternal(Course c) { addCourse(c); }
 
 
 }

@@ -20,7 +20,7 @@ public class Instructor implements Serializable {
         return this.name;
     }
     public String getSurname () {
-        return this.name;
+        return this.surname;
     }
     public int getExperience () {
         return this.experience;

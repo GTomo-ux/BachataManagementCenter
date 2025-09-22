@@ -13,36 +13,19 @@ import static java.util.Map.Entry.comparingByValue;
 public class Main {
     public static void main(String[] args) {
 
-        DanceSchool ds = DanceSchool.loadData();
+        DanceSchoolService service = new DanceSchoolService();
+
+        service.loadData();
 
 
-        ds.saveData();
 
 
+        System.out.println(service.stat(StatType.TOP_COURSES));
+        System.out.println(service.stat(StatType.MOST_ACTIVE_STUDENT));
+        System.out.println(service.stat(StatType.MOST_POPULAR_INSTRUCTOR));
 
-        Map<String,Integer> scores = Map.of("Ala",90,"Ola",72,"Jan",95,"Piotr",60);
+        service.saveData();
 
-        List<String> names = scores.entrySet().stream()
-                .filter(n -> n.getValue() >= 80)
-                .map(n -> n.getKey())
-                .sorted()
-                .collect(Collectors.toCollection(ArrayList::new));
-
-        Optional<String> topName = scores.entrySet().stream()
-                .max(comparingByValue())
-                .map(Map.Entry::getKey);
-
-        List<Map.Entry<String,Integer>> reverseValue = scores.entrySet().stream()
-                .sorted(Map.Entry.<String,Integer>comparingByValue().reversed())
-                .collect(Collectors.toCollection(ArrayList::new));
-
-        /* Map<String, Integer> newScores = scores.entrySet().stream()
-                        .map(c -> c.getValue() + 5)
-                                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, TreeMap::new));
-
-        System.out.println(reverseValue);
-
-        */
 
 
 
