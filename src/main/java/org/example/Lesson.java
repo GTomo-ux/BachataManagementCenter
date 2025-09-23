@@ -3,6 +3,7 @@ package org.example;
 import java.io.Serializable;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.Timer;
 
 public class Lesson implements Serializable {
@@ -12,14 +13,20 @@ public class Lesson implements Serializable {
     private int numberOfStudents;
     private Room room;
 
+    public Lesson (LocalDateTime localDateTime, Duration duration, Room room, Course course) {
+        this.localDateTime = localDateTime;
+        this.duration = duration;
+        this.course = course;
+        this.numberOfStudents = 0;
+        this.room = room;
+
+    }
     public Lesson (LocalDateTime localDateTime, Duration duration, Room room) {
         this.localDateTime = localDateTime;
         this.duration = duration;
         this.course = null;
         this.numberOfStudents = 0;
         this.room = room;
-
-
 
     }
     public LocalDateTime getStartTime () {
@@ -43,6 +50,20 @@ public class Lesson implements Serializable {
     public int getNumberOfStudents () {
         return this.numberOfStudents;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Lesson lesson = (Lesson) o;
+        return Objects.equals(localDateTime, lesson.localDateTime) && room == lesson.room;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(localDateTime, room);
+    }
+
     @Override
     public String toString () {
         if (this.course == null) {

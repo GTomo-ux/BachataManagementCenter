@@ -20,13 +20,15 @@ public class DanceSchool implements Serializable{
 
     public static DanceSchool getInstance() { return INSTANCE; }
 
-    // Gettery (dla prostoty – zwracamy „gołe” kolekcje jak u Ciebie)
     public Set<Student> getStudents () { return this.students; }
+    public Map<Integer, Student> getStudentMap () {
+        return this.studentMap;
+    }
     public List<Instructor> getInstructors () { return this.instructors; }
     public List<Course> getCourses () { return this.courses; }
     public List<Lesson> getLessons () { return this.lessons; }
 
-    // Proste "public" add – BEZ walidacji (waliduje serwis)
+
     public void addStudent(Student student) {
         this.students.add(student);
         this.studentMap.put(student.getID(), student);
@@ -38,12 +40,12 @@ public class DanceSchool implements Serializable{
         if (!this.courses.contains(course)) this.courses.add(course);
     }
 
-    // Lekcję dodajemy bez logiki kolizji - tę robi serwis
+
     void addLessonInternal(Lesson lesson) {
         if (!this.lessons.contains(lesson)) this.lessons.add(lesson);
     }
 
-    // Pomocnicze do odczytu po ID i resetu stanu (używa serwis przy load)
+
     Student findStudentById(int id) {
         return studentMap.get(id);
     }
@@ -60,6 +62,10 @@ public class DanceSchool implements Serializable{
     void addStudentInternal(Student s) {
         this.students.add(s);
         this.studentMap.put(s.getID(), s);
+    }
+    void removeStudentInternal(Student s) {
+        students.remove(s);
+        studentMap.remove(s.getID());
     }
     void addInstructorInternal(Instructor i) { addInstructor(i); }
     void addCourseInternal(Course c) { addCourse(c); }

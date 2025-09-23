@@ -3,6 +3,7 @@ package org.example;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class Instructor implements Serializable {
     private String name;
@@ -31,6 +32,31 @@ public class Instructor implements Serializable {
     public void add (Course course) {
         this.courses.add(course);
     }
+    public void remove (Course course) {
+        this.courses.remove(course);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (!(obj instanceof Instructor)) {
+            return false;
+        }
+        Instructor ins = (Instructor) obj;
+        if (ins.getName().equals(this.name) &&
+            ins.getSurname().equals(this.surname)) {
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, surname);
+    }
+
     @Override
     public String toString () {
         return this.name + " " + this.surname + ", " + this.experience + " years of experience.";

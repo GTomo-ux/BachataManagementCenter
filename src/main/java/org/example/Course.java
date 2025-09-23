@@ -3,6 +3,7 @@ package org.example;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class Course implements Serializable {
     private String name;
@@ -50,6 +51,32 @@ public class Course implements Serializable {
     public void setInstructor (Instructor instructor) {
         this.instructor = instructor;
     }
+    public void removeStudent (Student student) {
+        this.students.remove(student);
+    }
+    public void removeLesson (Lesson lesson) {
+        this.lessons.remove(lesson);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Course)) {
+            return false;
+        }
+        Course course = (Course) o;
+        if (this.name.equals(course.name) &&
+            this.level.equals(course.level)) {
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, level);
+    }
+
     @Override
     public String toString () {
         return this.name + ", " + this.level + ", limit of places: " + this.limitOfPlaces;

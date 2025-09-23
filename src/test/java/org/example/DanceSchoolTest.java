@@ -41,11 +41,11 @@ public class DanceSchoolTest {
         var s1 = service.addStudent("Gienek", "Loska");
         var s2 = service.addStudent("Zbigniew", "Fiodor");
 
-        assertDoesNotThrow(() -> service.studentToTheCourse(s1, "Bachata"),
+        assertDoesNotThrow(() -> service.studentToTheCourse(s1, "Bachata", "Beginner"),
                 "Pierwszy zapis powinien przejść");
 
         assertThrows(CourseFullException.class,
-                () -> service.studentToTheCourse(s2, "Bachata"),
+                () -> service.studentToTheCourse(s2, "Bachata", "Beginner"),
                 "Powinno rzucić wyjątek przy próbie zapisania nad limit");
     }
 
@@ -82,14 +82,28 @@ public class DanceSchoolTest {
         var student = service.addStudent("Tomasz", "Kornik");
         var student1 = service.addStudent("Angelika", "Adamczyk");
 
-        assertDoesNotThrow(() -> service.studentToTheCourse(student, "Salsa"),
+        assertDoesNotThrow(() -> service.studentToTheCourse(student, "Salsa", "Beginner"),
                 "Zapis powinien przejść");
 
-        assertDoesNotThrow(() -> service.removeStudentFromCourse(student, "Salsa"),
+        assertDoesNotThrow(() -> service.removeStudentFromCourse(student, "Salsa", "Beginner"),
                 "Wypisanie zapisanego studenta powinno przejść");
 
         assertThrows(NotEnrolledException.class,
-                () -> service.removeStudentFromCourse(student1, "Salsa"),
+                () -> service.removeStudentFromCourse(student1, "Salsa", "Beginner"),
                 "Powinno rzucić wyjątek dla studenta niezapisanego na kurs");
+    }
+
+    @Test
+    public void InstructorEquality() {
+        var a = new Instructor("Jan", "Nowak", 5);
+        var b = new Instructor("Jan", "Nowak", 10);
+        assertEquals(a, b);
+        assertEquals(a.hashCode(), b.hashCode());
+    }
+    @Test void courseUniqueness() {
+        var s = new java.util.HashSet<Course>();
+        s.add(new Course("Bachata", "Beginner", 20));
+        s.add(new Course("Bachata", "Beginner", 30));
+        assertEquals(1, s.size());
     }
 }

@@ -4,21 +4,31 @@ import org.example.exceptions.CourseFullException;
 import org.example.exceptions.NotEnrolledException;
 import org.example.exceptions.ScheduleConflictException;
 
+import org.example.payment.MonthlyUnlimitedPayment;
+import org.example.payment.PassPayment;
+import org.example.payment.PaymentStrategy;
+import org.example.payment.SingleEntryPayment;
+
 import java.io.*;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class DanceSchoolService {
 
     private final DanceSchool school = DanceSchool.getInstance();
     private int nextStudentId = 0;
     private final DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm");
 
     private final CourseFactory courseFactory = new ExtendedCourseFactory();
+
+    private final Map<Student, PaymentStrategy> paymentsByStudents = new HashMap<>();
 
     public DanceSchoolService() {
         // Opcjonalnie: auto wczytanie ist danych
@@ -38,6 +48,7 @@ public class DanceSchoolService {
         Student s = new Student(name, surname);
         s.setID(nextStudentId++);
         school.addStudent(s);
+        paymentsByStudents.put(s,new SingleEntryPayment());
         return s;
     }
 
@@ -47,6 +58,9 @@ public class DanceSchoolService {
 
     public void addCourse(Course course) {
         if (course == null) throw new IllegalArgumentException("Course cannot be null");
+        if (school.getCourses().contains(course)) {
+            throw new IllegalArgumentException("Course have already existed.");
+        }
         school.addCourse(course);
     }
 
@@ -64,16 +78,16 @@ public class DanceSchoolService {
         school.addLessonInternal(lesson);
     }
 
-    public void addLessonToTheCourse(Lesson lesson, String name) {
-        Course c = findCourseByName(name);
+    public void addLessonToTheCourse(Lesson lesson, String name, String level) {
+        Course c = findCourseByNameAndLevel(name, level);
         if (!c.getLessons().contains(lesson) && lesson.getCourse() == null) {
             lesson.setCourse(c);
             c.addLesson(lesson);
         }
     }
 
-    public void studentToTheCourse(Student student, String name) throws CourseFullException {
-        Course c = findCourseByName(name);
+    public void studentToTheCourse(Student student, String name, String level) throws CourseFullException {
+        Course c = findCourseByNameAndLevel(name, level);
         if (c.getStudents().contains(student)) return;
 
         if (c.getStudents().size() >= c.getLimitOfPlaces()) {
@@ -83,20 +97,92 @@ public class DanceSchoolService {
         c.addStudent(student);
     }
 
-    public void removeStudentFromCourse(Student student, String name) throws NotEnrolledException {
-        Course c = findCourseByName(name);
+    public void removeStudentFromCourse(Student student, String name, String level) throws NotEnrolledException {
+        Course c = findCourseByNameAndLevel(name, level);
         if (!c.getStudents().remove(student)) {
             throw new NotEnrolledException("The student was not enrolled in this course, so cannot be removed!");
         }
         student.remove(c);
     }
 
-    public void instructorToTheCourse(Instructor instructor, String name) {
-        Course c = findCourseByName(name);
+    public void instructorToTheCourse(Instructor instructor, String name, String level) {
+        Course c = findCourseByNameAndLevel(name, level);
         if (c.getInstructor() == null) {
             instructor.add(c);
             c.setInstructor(instructor);
         }
+    }
+    public void removeLesson (LocalDateTime localDateTime, Room room) {
+        Lesson lesson = findLesson(localDateTime, room);
+        Course course = lesson.getCourse();
+        course.removeLesson(lesson);
+        lesson.setCourse(null);
+        school.getLessons().remove(lesson);
+
+    }
+    public void removeCourse (String name, String level) {
+        Course course = findCourseByNameAndLevel(name, level);
+
+        Instructor inst = course.getInstructor();
+        if (inst != null) {
+            inst.getCourses().remove(course);
+            course.setInstructor(null);
+        }
+
+        for (Student s : course.getStudents()) {
+            s.remove(course);
+        }
+        course.getStudents().clear();
+
+        for (Lesson l : course.getLessons()) {
+            l.setCourse(null);
+        }
+        course.getLessons().clear();
+
+        school.getCourses().remove(course);
+
+
+    }
+    public void removeInstructor(String name, String surname) {
+        Instructor inst = findInstructorByNameAndSurname(name, surname);
+
+        for (Course c : school.getCourses()) {
+            if (inst.equals(c.getInstructor())) {
+                c.setInstructor(null);
+            }
+        }
+        inst.getCourses().clear();
+
+        school.getInstructors().remove(inst);
+    }
+
+    public void removeStudent(String name, String surname) {
+        Student s = findStudentByNameAndSurname(name, surname);
+
+        for (Course c : s.getCourses()) {
+            c.getStudents().remove(s);
+        }
+        s.getCourses().clear();
+
+
+        paymentsByStudents.remove(s);
+
+        school.removeStudentInternal(s);
+    }
+    public void removeStudentById(int id) {
+        Student s = school.getStudents().stream()
+                .filter(st -> st.getID() == id)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("No student with id = " + id));
+
+        for (Course c : s.getCourses()) {
+            c.getStudents().remove(s);
+        }
+        s.getCourses().clear();
+
+        paymentsByStudents.remove(s);
+
+        school.removeStudentInternal(s);
     }
 
     public Course createAndAddCourse(String name, CourseLevel level) {
@@ -116,6 +202,127 @@ public class DanceSchoolService {
         school.addCourse(c);
         return c;
     }
+
+    // Płatności
+    public void setSingleEntry(String name, String surname) {
+        Student s = findStudentByNameAndSurname(name, surname);
+        paymentsByStudents.put(s, new SingleEntryPayment());
+    }
+    public void setPass(String name, String surname, int entries) {
+        if (entries < 4) {
+            throw new IllegalArgumentException("Number of entries must be at least 4.");
+        }
+        Student s = findStudentByNameAndSurname(name, surname);
+        paymentsByStudents.put(s, new PassPayment(entries));
+    }
+    public void setMonthlyUnlimited(String name, String surname) {
+        Student s = findStudentByNameAndSurname(name, surname);
+        paymentsByStudents.put(s, new MonthlyUnlimitedPayment());
+    }
+
+    public double estimatePrice (String name, String surname) {
+        PaymentStrategy ps = getOrDefaultStrategy(name, surname);
+        return ps.calculatePrice();
+    }
+    public double estimatePrice (String name, String surname, int entries) {
+        if (entries < 0) throw new IllegalArgumentException("Number of entries cannot be negative");
+        PaymentStrategy ps = getOrDefaultStrategy(name, surname);
+        return ps.calculatePrice(entries);
+    }
+
+    public String currentPaymentName(String name, String surname) {
+        PaymentStrategy ps = getOrDefaultStrategy(name, surname);
+        return ps.getName();
+    }
+
+    // Harmonogramy
+
+    private Stream<Lesson> lessonsStream() {
+        return school.getLessons().stream();
+    }
+    private String formatLessonRow (Lesson l) {
+        String time = l.getStartTime().toLocalTime().format(TIME) + "-" + l.getEndTime().toLocalTime().format(TIME);
+        String course = (l.getCourse() == null) ? "(no course)" : (l.getCourse().getName() + " " + l.getCourse().getLevel());
+        String instructor = (l.getCourse() != null && l.getCourse().getInstructor() != null)
+                ? (l.getCourse().getInstructor().getName() + " " + l.getCourse().getInstructor().getSurname()) : "-";
+        String room = l.getRoom().name();
+
+        return String.format("%-13s | %-28s | %-18s | %s", time, course, room, instructor);
+
+    }
+    public String printDailySchedule (LocalDate date) {
+        List<Lesson> day = lessonsStream()
+                .filter(l -> l.getStartTime().toLocalDate().equals(date))
+                .sorted(Comparator.comparing(Lesson::getStartTime).thenComparing(l -> l.getRoom().ordinal()))
+                .collect(Collectors.toList());
+        if (day.isEmpty()) {
+            return "No lessons on " + date;
+        }
+
+        StringBuilder sb = new StringBuilder("Schedule for " + date + "\n");
+        sb.append("Time         | Course                      | Room              | Instructor\n");
+        sb.append("-------------+-----------------------------+-------------------+----------------------\n");
+        day.forEach(l -> sb.append(formatLessonRow(l)).append("\n"));
+        return sb.toString();
+    }
+    public String printWeeklySchedule(LocalDate startDateInclusive) {
+        StringBuilder sb = new StringBuilder("Weekly schedule from " + startDateInclusive + " to " + startDateInclusive.plusDays(6) + "\n");
+        for (int d = 0; d < 7; d++) {
+            LocalDate day = startDateInclusive.plusDays(d);
+            String dayBlock = printDailySchedule(day);
+            if (!dayBlock.startsWith("No lessons")) sb.append("\n").append(dayBlock);
+        }
+        if (sb.toString().endsWith(")\n")) return sb.toString();
+
+        return "No lessons between " + startDateInclusive + " and " + startDateInclusive.plusDays(6);
+    }
+    public String printRoomSchedule(LocalDate date, Room room) {
+        List<Lesson> day = lessonsStream()
+                .filter(l -> l.getStartTime().toLocalDate().equals(date) && l.getRoom() == room)
+                .sorted(Comparator.comparing(Lesson::getStartTime))
+                .collect(Collectors.toList());
+
+        if (day.isEmpty()) return "No lessons in " + room + " on " + date;
+
+        StringBuilder sb = new StringBuilder("Schedule for " + date + " — " + room + "\n");
+        sb.append("Time         | Course                      | Room              | Instructor\n");
+        sb.append("-------------+-----------------------------+-------------------+----------------------\n");
+        day.forEach(l -> sb.append(formatLessonRow(l)).append("\n"));
+        return sb.toString();
+    }
+    public String printInstructorSchedule(LocalDate date, String name, String surname) {
+        Instructor i = findInstructorByNameAndSurname(name, surname);
+        List<Lesson> day = lessonsStream()
+                .filter(l -> l.getStartTime().toLocalDate().equals(date))
+                .filter(l -> l.getCourse() != null && i.equals(l.getCourse().getInstructor()))
+                .sorted(Comparator.comparing(Lesson::getStartTime))
+                .collect(Collectors.toList());
+        if (day.isEmpty()) return "No lessons for instructor " + name + " " + surname + " on " + date;
+
+        StringBuilder sb = new StringBuilder("Schedule for " + date + " — Instructor " + name + " " + surname + "\n");
+        sb.append("Time         | Course                      | Room              | Instructor\n");
+        sb.append("-------------+-----------------------------+-------------------+----------------------\n");
+        day.forEach(l -> sb.append(formatLessonRow(l)).append("\n"));
+        return sb.toString();
+    }
+
+    public String printStudentSchedule(LocalDate date, String name, String surname) {
+        Student s = findStudentByNameAndSurname(name, surname);
+        Set<Course> myCourses = new HashSet<>(s.getCourses());
+        List<Lesson> day = lessonsStream()
+                .filter(l -> l.getStartTime().toLocalDate().equals(date))
+                .filter(l -> l.getCourse() != null && myCourses.contains(l.getCourse()))
+                .sorted(Comparator.comparing(Lesson::getStartTime))
+                .collect(Collectors.toList());
+        if (day.isEmpty()) return "No lessons for student " + name + " " + surname + " on " + date;
+
+        StringBuilder sb = new StringBuilder("Schedule for " + date + " — Student " + name + " " + surname + "\n");
+        sb.append("Time         | Course                      | Room              | Instructor\n");
+        sb.append("-------------+-----------------------------+-------------------+----------------------\n");
+        day.forEach(l -> sb.append(formatLessonRow(l)).append("\n"));
+        return sb.toString();
+    }
+
 
 
 
@@ -301,11 +508,26 @@ public class DanceSchoolService {
     }
 
     // ---------- Pomocnicze ----------
-    private Course findCourseByName(String name) {
+    private Course findCourseByNameAndLevel(String name, String level) {
         return school.getCourses().stream()
-                .filter(c -> c.getName().equals(name))
+                .filter(c -> c.getName().toLowerCase().equals(name.toLowerCase().trim()) && c.getLevel().toLowerCase().equals(level.toLowerCase().trim()))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("\nNo course named: " + name));
+                .orElseThrow(() -> new IllegalArgumentException("\nNo course named: " + name + ", " + level + " level."));
+    }
+    private Student findStudentByNameAndSurname(String name, String surname) {
+        return school.getStudents().stream()
+                .filter(s -> (s.getName().toLowerCase().equals(name.toLowerCase().trim()) && s.getSurname().toLowerCase().equals(surname.toLowerCase().trim())))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("\nNo student named: " + name + " " + surname + "."));
+    }
+    private Student findStudentByID (int ID) {
+        return school.getStudentMap().get(ID);
+    }
+    private Instructor findInstructorByNameAndSurname(String name, String surname) {
+        return school.getInstructors().stream()
+                .filter(i -> (i.getName().toLowerCase().equals(name.toLowerCase().trim()) && i.getSurname().toLowerCase().equals(surname.toLowerCase().trim())))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("\nNo instructor named: " + name + " " + surname + "."));
     }
 
     private void validateNameLevel(String name, CourseLevel level) {
@@ -322,6 +544,18 @@ public class DanceSchoolService {
                     "Course already exists: " + name + " (" + level.getLabel() + ")"
             );
         }
+    }
+
+    private PaymentStrategy getOrDefaultStrategy (String name, String surname) {
+        Student s = findStudentByNameAndSurname(name, surname);
+        return paymentsByStudents.computeIfAbsent(s, stu -> new SingleEntryPayment());
+    }
+
+    private Lesson findLesson (LocalDateTime localDateTime, Room room) {
+        return school.getLessons().stream()
+                .filter(l -> (l.getStartTime().equals(localDateTime) && l.getRoom() == room))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("\nThere is no such a Lesson."));
     }
 
 }
