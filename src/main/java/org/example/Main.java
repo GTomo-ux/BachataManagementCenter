@@ -13,27 +13,18 @@ import static java.util.Map.Entry.comparingByValue;
 public class Main {
     public static void main(String[] args) {
 
-        DanceSchoolService service = new DanceSchoolService();
+        //DanceSchoolService service = new DanceSchoolService();
 
-        service.loadData();
-
-
+        //service.loadData();
 
 
-        System.out.println(service.stat(StatType.TOP_COURSES));
-        System.out.println(service.stat(StatType.MOST_ACTIVE_STUDENT));
-        System.out.println(service.stat(StatType.MOST_POPULAR_INSTRUCTOR));
-
-        service.saveData();
+        //service.saveData();
 
 
 
-
-
-
-
-
-
-
+    }
+    public static void clearConsole() {
+        System.out.print("\033[H\033[2J");
+        System.out.flush();
     }
 }

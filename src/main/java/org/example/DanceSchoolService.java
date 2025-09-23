@@ -85,6 +85,13 @@ public class DanceSchoolService {
             c.addLesson(lesson);
         }
     }
+    public void removeLessonFromTheCourse(Lesson lesson, String name, String level) {
+        Course c = findCourseByNameAndLevel(name, level);
+        if (c.getLessons().contains(lesson)) {
+            lesson.setCourse(null);
+            c.getLessons().remove(lesson);
+        }
+    }
 
     public void studentToTheCourse(Student student, String name, String level) throws CourseFullException {
         Course c = findCourseByNameAndLevel(name, level);
@@ -110,6 +117,14 @@ public class DanceSchoolService {
         if (c.getInstructor() == null) {
             instructor.add(c);
             c.setInstructor(instructor);
+        }
+    }
+    public void removeInstructorFromTheCourse(Instructor instructor, String name, String level) {
+        Course c = findCourseByNameAndLevel(name, level);
+        if (c.getInstructor() == instructor && c.getInstructor() != null) {
+            instructor.getCourses().remove(c);
+            c.setInstructor(null);
+
         }
     }
     public void removeLesson (LocalDateTime localDateTime, Room room) {
