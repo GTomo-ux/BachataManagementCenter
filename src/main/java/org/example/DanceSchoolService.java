@@ -3,6 +3,7 @@ package org.example;
 import org.example.exceptions.CourseFullException;
 import org.example.exceptions.NotEnrolledException;
 import org.example.exceptions.ScheduleConflictException;
+import org.example.exceptions.LessonEnrollWithNoCourseException;
 
 import org.example.payment.MonthlyUnlimitedPayment;
 import org.example.payment.PassPayment;
@@ -110,6 +111,28 @@ public class DanceSchoolService {
             throw new NotEnrolledException("The student was not enrolled in this course, so cannot be removed!");
         }
         student.remove(c);
+    }
+    public void addStudentToTheLesson(Student student, LocalDateTime localDateTime, Room room) throws LessonEnrollWithNoCourseException{
+
+        Lesson lesson = findLesson(localDateTime, room);
+        if (lesson.getStudents().contains(student)) {
+            throw new IllegalStateException("Student has been already enrolled to the lesson!");
+        }
+        if (lesson.getCourse() == null) {
+            throw new IllegalStateException("Enrollment is not possible, because the lesson had not been assigned to any course yet!");
+        }
+        Course c = lesson.getCourse();
+        if (!(student.getCourses().contains(c))) {
+            throw new LessonEnrollWithNoCourseException("Before signing up for this lesson, a student must first be enrolled in the course: " + lesson.getCourse() + ".");
+        }
+        lesson.addStudent(student);
+    }
+    public void removeStudentFromLesson(Student student, LocalDateTime localDateTime, Room room) throws NotEnrolledException {
+        Lesson l = findLesson(localDateTime, room);
+        if (!(l.getStudents().contains(student))) {
+            throw new NotEnrolledException("The student was not enrolled in this lesson, so cannot be removed!");
+        }
+        l.removeStudent(student);
     }
 
     public void instructorToTheCourse(Instructor instructor, String name, String level) {

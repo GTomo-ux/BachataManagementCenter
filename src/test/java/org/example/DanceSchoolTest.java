@@ -1,6 +1,7 @@
 package org.example;
 
 import org.example.exceptions.CourseFullException;
+import org.example.exceptions.LessonEnrollWithNoCourseException;
 import org.example.exceptions.NotEnrolledException;
 import org.example.exceptions.ScheduleConflictException;
 import org.junit.jupiter.api.BeforeEach;
@@ -8,6 +9,8 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -35,7 +38,7 @@ public class DanceSchoolTest {
 
     @Test
     public void testStudentToTheCourse_ThrowsExceptionWhenFull() {
-        var c1 = new Course("Bachata", "Basic", 1, null);
+        var c1 = new Course("Bachata", "Beginner", 1, null);
         service.addCourse(c1);
 
         var s1 = service.addStudent("Gienek", "Loska");
@@ -76,7 +79,7 @@ public class DanceSchoolTest {
 
     @Test
     public void removeStudentFromCourse_NotEnrolledException() {
-        var course = new Course("Salsa", "Basic", 20, null);
+        var course = new Course("Salsa", "Beginner", 20, null);
         service.addCourse(course);
 
         var student = service.addStudent("Tomasz", "Kornik");
@@ -105,5 +108,52 @@ public class DanceSchoolTest {
         s.add(new Course("Bachata", "Beginner", 20));
         s.add(new Course("Bachata", "Beginner", 30));
         assertEquals(1, s.size());
+    }
+    @Test
+    public void addStudentToTheLesson_LessonEnrollWithNoCourseException() {
+        Course course = new Course("Bachata Influence", "Beginner", 100);
+        Course course2 = new Course("Bachata Dominicana", "Beginner", 100);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        Lesson lesson = new Lesson(LocalDateTime.of(2025,8,02,11,23),Duration.ofMinutes(90), Room.ROOM1);
+        String date = "2025-09-12 12:21";
+        Lesson lesson2 = new Lesson(LocalDateTime.parse("2025-09-10 12:21", formatter), Duration.ofMinutes(90), Room.ROOM1);
+        Lesson lesson3 = new Lesson(LocalDateTime.parse(date, formatter), Duration.ofMinutes(90), Room.ROOM1);
+        Student student = new Student("Adam", "Gacek");
+        Student student2 = new Student("Gienek", "Wolny");
+        service.addCourse(course);
+        service.addCourse(course2);
+        service.addStudent(student.getName(), student.getSurname());
+        service.addStudent(student2.getName(), student2.getSurname());
+        try {
+            service.addLesson(lesson);
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+        try {
+            service.addLesson(lesson2);
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+        try {
+            service.addLesson(lesson3);
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+        service.addLessonToTheCourse(lesson, "Bachata Influence", "Beginner");
+        service.addLessonToTheCourse(lesson2, "Bachata Influence", "Beginner");
+        service.addLessonToTheCourse(lesson3, "Bachata Influence", "Beginner");
+
+
+        try {
+            service.studentToTheCourse(student, "Bachata Influence", "Beginner");
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+
+
+        assertThrows(LessonEnrollWithNoCourseException.class, () -> service.addStudentToTheLesson(student2, lesson.getStartTime(), lesson.getRoom()),
+                "Powinno rzucic wyjątek ze student musi się najpierw zapisać na kurs");
+        assertDoesNotThrow(() -> service.addStudentToTheLesson(student, lesson.getStartTime(), lesson.getRoom()));
+
     }
 }
