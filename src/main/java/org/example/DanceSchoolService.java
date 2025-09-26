@@ -43,6 +43,10 @@ public class DanceSchoolService {
                 .max().orElse(-1) + 1;
     }
 
+    public DanceSchool getSchool () {
+        return this.school;
+    }
+
     // Operacje na modelu, walidacje itd.
 
     public Student addStudent(String name, String surname) {
@@ -54,6 +58,9 @@ public class DanceSchoolService {
     }
 
     public void addInstructor(Instructor instructor) {
+        if (school.getInstructors().contains(instructor)) {
+            throw new IllegalArgumentException("Instructor have already existed.");
+        }
         school.addInstructor(instructor);
     }
 
@@ -231,6 +238,7 @@ public class DanceSchoolService {
         school.addCourse(c);
         return c;
     }
+
     public Course createAndAddCourse(String name, CourseLevel level, int limit) {
         validateNameLevel(name, level);
         if (limit <= 0) throw new IllegalArgumentException("Limit must be > 0");
@@ -425,7 +433,7 @@ public class DanceSchoolService {
                 .sorted(Map.Entry.<Course, Integer>comparingByValue().reversed())
                 .collect(Collectors.toList());
 
-        return "Top 3 most popular courses: \n" +
+        return "Top 3 most popular courses: \n" + "\n" +
                 "1. " + sorted.get(0).getKey().getName() + ", " + sorted.get(0).getKey().getLevel() + " - " + sorted.get(0).getValue() + " enrolled students\n" +
                 "2. " + sorted.get(1).getKey().getName() + ", " + sorted.get(1).getKey().getLevel() + " - " + sorted.get(1).getValue() + " enrolled students\n" +
                 "3. " + sorted.get(2).getKey().getName() + ", " + sorted.get(2).getKey().getLevel() + " - " + sorted.get(2).getValue() + " enrolled students";
@@ -546,22 +554,22 @@ public class DanceSchoolService {
     }
 
     // ---------- Pomocnicze ----------
-    private Course findCourseByNameAndLevel(String name, String level) {
+    public Course findCourseByNameAndLevel(String name, String level) {
         return school.getCourses().stream()
                 .filter(c -> c.getName().toLowerCase().equals(name.toLowerCase().trim()) && c.getLevel().toLowerCase().equals(level.toLowerCase().trim()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("\nNo course named: " + name + ", " + level + " level."));
     }
-    private Student findStudentByNameAndSurname(String name, String surname) {
+    public Student findStudentByNameAndSurname(String name, String surname) {
         return school.getStudents().stream()
                 .filter(s -> (s.getName().toLowerCase().equals(name.toLowerCase().trim()) && s.getSurname().toLowerCase().equals(surname.toLowerCase().trim())))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("\nNo student named: " + name + " " + surname + "."));
     }
-    private Student findStudentByID (int ID) {
+    public Student findStudentByID (int ID) {
         return school.getStudentMap().get(ID);
     }
-    private Instructor findInstructorByNameAndSurname(String name, String surname) {
+    public Instructor findInstructorByNameAndSurname(String name, String surname) {
         return school.getInstructors().stream()
                 .filter(i -> (i.getName().toLowerCase().equals(name.toLowerCase().trim()) && i.getSurname().toLowerCase().equals(surname.toLowerCase().trim())))
                 .findFirst()
@@ -589,7 +597,7 @@ public class DanceSchoolService {
         return paymentsByStudents.computeIfAbsent(s, stu -> new SingleEntryPayment());
     }
 
-    private Lesson findLesson (LocalDateTime localDateTime, Room room) {
+    public Lesson findLesson (LocalDateTime localDateTime, Room room) {
         return school.getLessons().stream()
                 .filter(l -> (l.getStartTime().equals(localDateTime) && l.getRoom() == room))
                 .findFirst()
