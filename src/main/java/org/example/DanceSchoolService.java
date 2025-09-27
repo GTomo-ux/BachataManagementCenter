@@ -20,6 +20,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 public class DanceSchoolService {
 
     private final DanceSchool school = DanceSchool.getInstance();
@@ -30,6 +34,13 @@ public class DanceSchoolService {
     private final CourseFactory courseFactory = new ExtendedCourseFactory();
 
     private final Map<Student, PaymentStrategy> paymentsByStudents = new HashMap<>();
+    private static final int COL_TIME = 11;
+    private static final int COL_COURSE = 28;
+    private static final int COL_ROOM = 8;
+    private static final int COL_INSTR = 20;
+
+    private static final String ROW_FMT =
+            "%-" + COL_TIME + "s | %-" + COL_COURSE + "s | %-" + COL_ROOM + "s | %-" + COL_INSTR + "s";
 
     public DanceSchoolService() {
         // Opcjonalnie: auto wczytanie ist danych
@@ -50,10 +61,16 @@ public class DanceSchoolService {
     // Operacje na modelu, walidacje itd.
 
     public Student addStudent(String name, String surname) {
+        if (studentExistsByName(name, surname)) {
+
+            throw new IllegalStateException("Student already exists: " + name + " " + surname);
+
+        }
+
         Student s = new Student(name, surname);
         s.setID(nextStudentId++);
         school.addStudent(s);
-        paymentsByStudents.put(s,new SingleEntryPayment());
+        paymentsByStudents.put(s, new SingleEntryPayment());
         return s;
     }
 
@@ -286,15 +303,33 @@ public class DanceSchoolService {
     private Stream<Lesson> lessonsStream() {
         return school.getLessons().stream();
     }
-    private String formatLessonRow (Lesson l) {
-        String time = l.getStartTime().toLocalTime().format(TIME) + "-" + l.getEndTime().toLocalTime().format(TIME);
-        String course = (l.getCourse() == null) ? "(no course)" : (l.getCourse().getName() + " " + l.getCourse().getLevel());
-        String instructor = (l.getCourse() != null && l.getCourse().getInstructor() != null)
-                ? (l.getCourse().getInstructor().getName() + " " + l.getCourse().getInstructor().getSurname()) : "-";
+    private static String sep() {
+        return "-".repeat(COL_TIME) + "-+-" +
+                "-".repeat(COL_COURSE) + "-+-" +
+                "-".repeat(COL_ROOM) + "-+-" +
+                "-".repeat(COL_INSTR);
+    }
+    private static String cut(String s, int w) {
+        return (s == null) ? "" : (s.length() <= w ? s : s.substring(0, Math.max(0, w - 1)) + "…");
+    }
+    private String formatLessonRow(Lesson l) {
+        String time = l.getStartTime().toLocalTime().format(TIME) + "–" +
+                l.getEndTime().toLocalTime().format(TIME);
+        String course = (l.getCourse() == null)
+                ? "(no course)"
+                : l.getCourse().getName() + " " + l.getCourse().getLevel();
         String room = l.getRoom().name();
+        String instr = (l.getCourse() != null && l.getCourse().getInstructor() != null)
+                ? (l.getCourse().getInstructor().getName() + " " + l.getCourse().getInstructor().getSurname())
+                : "-";
 
-        return String.format("%-13s | %-28s | %-18s | %s", time, course, room, instructor);
+        // przyciecie jak za dlugie
+        time   = cut(time,   COL_TIME);
+        course = cut(course, COL_COURSE);
+        room   = cut(room,   COL_ROOM);
+        instr  = cut(instr,  COL_INSTR);
 
+        return String.format(ROW_FMT, time, course, room, instr);
     }
     public String printDailySchedule (LocalDate date) {
         List<Lesson> day = lessonsStream()
@@ -306,8 +341,8 @@ public class DanceSchoolService {
         }
 
         StringBuilder sb = new StringBuilder("Schedule for " + date + "\n");
-        sb.append("Time         | Course                      | Room              | Instructor\n");
-        sb.append("-------------+-----------------------------+-------------------+----------------------\n");
+        sb.append(String.format(ROW_FMT, "Time", "Course", "Room", "Instructor")).append("\n");
+        sb.append(sep()).append("\n");
         day.forEach(l -> sb.append(formatLessonRow(l)).append("\n"));
         return sb.toString();
     }
@@ -331,8 +366,8 @@ public class DanceSchoolService {
         if (day.isEmpty()) return "No lessons in " + room + " on " + date;
 
         StringBuilder sb = new StringBuilder("Schedule for " + date + " — " + room + "\n");
-        sb.append("Time         | Course                      | Room              | Instructor\n");
-        sb.append("-------------+-----------------------------+-------------------+----------------------\n");
+        sb.append(String.format(ROW_FMT, "Time", "Course", "Room", "Instructor")).append("\n");
+        sb.append(sep()).append("\n");
         day.forEach(l -> sb.append(formatLessonRow(l)).append("\n"));
         return sb.toString();
     }
@@ -346,8 +381,8 @@ public class DanceSchoolService {
         if (day.isEmpty()) return "No lessons for instructor " + name + " " + surname + " on " + date;
 
         StringBuilder sb = new StringBuilder("Schedule for " + date + " — Instructor " + name + " " + surname + "\n");
-        sb.append("Time         | Course                      | Room              | Instructor\n");
-        sb.append("-------------+-----------------------------+-------------------+----------------------\n");
+        sb.append(String.format(ROW_FMT, "Time", "Course", "Room", "Instructor")).append("\n");
+        sb.append(sep()).append("\n");
         day.forEach(l -> sb.append(formatLessonRow(l)).append("\n"));
         return sb.toString();
     }
@@ -363,8 +398,8 @@ public class DanceSchoolService {
         if (day.isEmpty()) return "No lessons for student " + name + " " + surname + " on " + date;
 
         StringBuilder sb = new StringBuilder("Schedule for " + date + " — Student " + name + " " + surname + "\n");
-        sb.append("Time         | Course                      | Room              | Instructor\n");
-        sb.append("-------------+-----------------------------+-------------------+----------------------\n");
+        sb.append(String.format(ROW_FMT, "Time", "Course", "Room", "Instructor")).append("\n");
+        sb.append(sep()).append("\n");
         day.forEach(l -> sb.append(formatLessonRow(l)).append("\n"));
         return sb.toString();
     }
@@ -442,36 +477,40 @@ public class DanceSchoolService {
     // ---------- I/O: zapisz / wczytaj (prosto, jak miałeś) ----------
 
     public void saveData() {
-        // 1. Students
-        try (PrintWriter writer = new PrintWriter(new FileWriter("Students"))) {
-            for (Student student: school.getStudents()) {
+        // Students
+        try (var writer = new java.io.PrintWriter(
+                Files.newBufferedWriter(Path.of("Students"), StandardCharsets.UTF_8))) {
+            for (Student student : school.getStudents()) {
                 writer.println(student.getName() + "," + student.getSurname() + "," + student.getID());
             }
         } catch (IOException e) {
             System.out.println("Students enrollment error: " + e.getMessage());
         }
 
-        // 2. Instructors
-        try (PrintWriter writer = new PrintWriter(new FileWriter("Instructors"))) {
-            for (Instructor instructor: school.getInstructors()) {
+        // Instructors
+        try (var writer = new java.io.PrintWriter(
+                Files.newBufferedWriter(Path.of("Instructors"), StandardCharsets.UTF_8))) {
+            for (Instructor instructor : school.getInstructors()) {
                 writer.println(instructor.getName() + "," + instructor.getSurname() + "," + instructor.getExperience());
             }
         } catch (IOException e) {
             System.out.println("Instructors enrollment error: " + e.getMessage());
         }
 
-        // 3. Courses
-        try (PrintWriter writer = new PrintWriter(new FileWriter("Courses"))) {
-            for (Course course: school.getCourses()) {
+        // Courses
+        try (var writer = new java.io.PrintWriter(
+                Files.newBufferedWriter(Path.of("Courses"), StandardCharsets.UTF_8))) {
+            for (Course course : school.getCourses()) {
                 writer.println(course.getName() + "," + course.getLevel() + "," + course.getLimitOfPlaces());
             }
         } catch (IOException e) {
             System.out.println("Courses enrollment error: " + e.getMessage());
         }
 
-        // 4. Lessons
-        try (PrintWriter writer = new PrintWriter(new FileWriter("Lessons"))) {
-            for (Lesson lesson: school.getLessons()) {
+        // Lessons
+        try (var writer = new java.io.PrintWriter(
+                Files.newBufferedWriter(Path.of("Lessons"), StandardCharsets.UTF_8))) {
+            for (Lesson lesson : school.getLessons()) {
                 writer.println(lesson.getStartTime().format(fmt) + "," +
                         lesson.getDuration().toMinutes() + "," +
                         lesson.getRoom());
@@ -503,7 +542,7 @@ public class DanceSchoolService {
             school.clearAll();
 
             // Students
-            try (Scanner scanner = new Scanner(new File("Students"))) {
+            try (Scanner scanner = new Scanner(new File("Students"), StandardCharsets.UTF_8)) {
                 while (scanner.hasNextLine()) {
                     String[] parts = scanner.nextLine().split(",");
                     Student s = new Student(parts[0], parts[1]);
@@ -516,7 +555,7 @@ public class DanceSchoolService {
             }
 
             // Instructors
-            try (Scanner sc = new Scanner(new File("Instructors"))) {
+            try (Scanner sc = new Scanner(new File("Instructors"), StandardCharsets.UTF_8)) {
                 while (sc.hasNextLine()) {
                     String[] parts = sc.nextLine().split(",");
                     school.addInstructorInternal(new Instructor(parts[0], parts[1], Integer.parseInt(parts[2])));
@@ -526,7 +565,7 @@ public class DanceSchoolService {
             }
 
             // Courses
-            try (Scanner sc = new Scanner(new File("Courses"))) {
+            try (Scanner sc = new Scanner(new File("Courses"), StandardCharsets.UTF_8)) {
                 while (sc.hasNextLine()) {
                     String[] parts = sc.nextLine().split(",");
                     school.addCourseInternal(new Course(parts[0], parts[1], Integer.parseInt(parts[2])));
@@ -536,7 +575,7 @@ public class DanceSchoolService {
             }
 
             // Lessons
-            try (Scanner sc = new Scanner(new File("Lessons"))) {
+            try (Scanner sc = new Scanner(new File("Lessons"), StandardCharsets.UTF_8)) {
                 while (sc.hasNextLine()) {
                     String[] parts = sc.nextLine().split(",");
                     LocalDateTime start = LocalDateTime.parse(parts[0], fmt);
@@ -554,6 +593,14 @@ public class DanceSchoolService {
     }
 
     // ---------- Pomocnicze ----------
+
+    private boolean studentExistsByName(String name, String surname) {
+        String n = name.trim().toLowerCase();
+        String s = surname.trim().toLowerCase();
+        return school.getStudents().stream()
+                .anyMatch(st -> st.getName().trim().toLowerCase().equals(n)
+                        && st.getSurname().trim().toLowerCase().equals(s));
+    }
     public Course findCourseByNameAndLevel(String name, String level) {
         return school.getCourses().stream()
                 .filter(c -> c.getName().toLowerCase().equals(name.toLowerCase().trim()) && c.getLevel().toLowerCase().equals(level.toLowerCase().trim()))

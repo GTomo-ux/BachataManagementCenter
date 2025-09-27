@@ -61,7 +61,7 @@ public class UserInterface {
                 }
                 case "0" -> { return Panel.EXIT; }
                 default  -> {
-                    System.out.println("Zły wybór. Enter...");
+                    System.out.println("Wrong choice. Enter...");
                     sc.nextLine();
                 }
             }
@@ -71,14 +71,15 @@ public class UserInterface {
         while (true) {
             clear();
             System.out.println("""
-                    === STUDENT ===
-                    1) Register student
-                    2) Enroll student to course
-                    3) Enroll student to lesson
-                    4) Unenroll student from course
-                    5) Unenroll student from lesson
-                    0) Back
-                    """);
+                === STUDENT ===
+                1) Register student
+                2) Enroll student to course
+                3) Enroll student to lesson
+                4) Unenroll student from course
+                5) Unenroll student from lesson
+                6) Find my profile (ID / Name+Surname)
+                0) Back
+                """);
             String c = readLine("> ");
             try {
                 switch (c) {
@@ -86,7 +87,7 @@ public class UserInterface {
                         String name = readLine("Name: ");
                         String surname = readLine("Surname: ");
                         var s = service.addStudent(name, surname);
-                        service.saveData(); // zapisz zmiany
+                        service.saveData();
                         System.out.println("Registered: " + s);
                         System.out.println("Enter...");
                         sc.nextLine();
@@ -147,11 +148,15 @@ public class UserInterface {
                         System.out.println("Enter...");
                         sc.nextLine();
                     }
+                    case "6" -> {
+                        Student s = findStudentFlow();
+                        if (s != null) printStudentWithCourses(s);
+                    }
                     case "0" -> { return Panel.MAIN; }
-                    default -> System.out.println("Zły wybór. Enter...");
+                    default -> System.out.println("Wrong choice. Enter...");
                 }
             } catch (Exception ex) {
-                System.out.println("Błąd: " + ex.getMessage());
+                System.out.println("Error: " + ex.getMessage());
                 System.out.println("Enter...");
                 sc.nextLine();
             }
@@ -163,7 +168,7 @@ public class UserInterface {
             String r = readLine("Room (1/2): ");
             if (r.equals("1")) return Room.ROOM1;
             if (r.equals("2")) return Room.ROOM2;
-            System.out.println("Nieznany pokój.");
+            System.out.println("Unknown room.");
         }
     }
     private Panel schedulePanel() {
@@ -186,7 +191,7 @@ public class UserInterface {
                 case "4" -> instructorSchedule();
                 case "5" -> studentSchedule();
                 case "0" -> { return Panel.MAIN; }
-                default -> { System.out.println("Zły wybór. Enter..."); sc.nextLine(); }
+                default -> { System.out.println("Wrong choice. Enter..."); sc.nextLine(); }
             }
         }
     }
@@ -323,6 +328,7 @@ public class UserInterface {
                     9) Remove student from course
                     10) Remove lesson from course
                     11) Remove student/instructor/course/lesson
+                    12) Display student/instructor/course
                     0) Back
                     """);
             String c = readLine("> ");
@@ -342,7 +348,7 @@ public class UserInterface {
                     }
                     case "3" -> {
                         String name = readLine("Course name: ");
-                        String level = readLine("Level (e.g. Beginner/Basic): ");
+                        String level = readLine("Level (e.g. Beginner/Intermediate): ");
                         int limit = readInt("Limit: ");
                         service.addCourse(new Course(name, level, limit));
                         service.saveData();
@@ -427,12 +433,95 @@ public class UserInterface {
                     case "11" -> {
                         adminRemovePanel();
                     }
+                    case "12" -> {
+                        adminViewPanel();
+                    }
                     case "0" -> { return Panel.MAIN; }
                     default -> { System.out.println("Wrong choice. Enter..."); sc.nextLine(); }
                 }
             } catch (Exception ex) {
                 System.out.println("Error: " + ex.getMessage());
                 System.out.println("Enter..."); sc.nextLine();
+            }
+        }
+    }
+    private void adminViewPanel() {
+        while (true) {
+            clear();
+            System.out.println("""
+                === VIEW ===
+                1) Instructors
+                2) Courses
+                3) Schedules (same as main menu)
+                4) Students
+                0) Back
+                """);
+            String c = readLine("> ");
+            switch (c) {
+                case "1" -> {
+                    clear();
+                    System.out.println("=== INSTRUCTORS ===\n");
+                    service.getSchool().getInstructors().forEach(System.out::println);
+                    pause();
+                }
+                case "2" -> {
+                    clear();
+                    System.out.println("=== COURSES ===\n");
+                    service.getSchool().getCourses().forEach(System.out::println);
+                    pause();
+                }
+                case "3" -> {
+                    schedulePanel();
+                }
+                case "4" -> {
+                    adminViewStudentsPanel();
+                }
+                case "0" -> { return; }
+                default -> { System.out.println("Wrong choice. Press Enter..."); sc.nextLine(); }
+            }
+        }
+    }
+
+    private void adminViewStudentsPanel() {
+        while (true) {
+            clear();
+            System.out.println("""
+                === STUDENTS VIEW ===
+                1) List all students (with courses)
+                2) Find single student (ID / Name+Surname)
+                0) Back
+                """);
+            String c = readLine("> ");
+            switch (c) {
+                case "1" -> {
+                    clear();
+                    if (service.getSchool().getStudents().isEmpty()) {
+                        System.out.println("No students.");
+                    } else {
+                        for (Student s : service.getSchool().getStudents()) {
+                            System.out.println("-".repeat(50));
+                            System.out.println(s.getName() + " " + s.getSurname() + " (ID: " + s.getID() + ")");
+                            if (s.getCourses().isEmpty()) {
+                                System.out.println("  • none");
+                            } else {
+                                for (Course c2 : s.getCourses()) {
+                                    String instr = (c2.getInstructor() == null)
+                                            ? "instructor: (not assigned)"
+                                            : "instructor: " + c2.getInstructor().getName() + " " + c2.getInstructor().getSurname();
+                                    System.out.println("  • " + c2.getName() + " " + c2.getLevel() + " — " + instr);
+                                }
+                            }
+                        }
+                        System.out.println("-".repeat(50));
+                    }
+                    pause();
+                }
+                case "2" -> {
+                    Student s = findStudentFlow();
+                    if (s != null) printStudentWithCourses(s);
+                }
+                case "0" -> { return; }
+                default -> { System.out.println("Wrong choice. Press Enter..."); sc.nextLine(); }
             }
         }
     }
@@ -542,5 +631,60 @@ public class UserInterface {
             sc.nextLine();
         }
         return false;
+    }
+    private void printStudentWithCourses(Student s) {
+        clear();
+        System.out.println("Student: " + s.getName() + " " + s.getSurname() + " (ID: " + s.getID() + ")");
+        System.out.println("Enrolled courses:");
+        if (s.getCourses().isEmpty()) {
+            System.out.println("  — none");
+        } else {
+            for (Course c : s.getCourses()) {
+                String instr = (c.getInstructor() == null)
+                        ? "instructor: (not assigned)"
+                        : "instructor: " + c.getInstructor().getName() + " " + c.getInstructor().getSurname();
+                System.out.println("  • " + c.getName() + " " + c.getLevel() + " — " + instr);
+            }
+        }
+        System.out.println("\n0) Back");
+        readLine("> ");
+    }
+
+    private Student findStudentFlow() {
+        while (true) {
+            clear();
+            System.out.println("""
+                Find a student:
+                1) By ID
+                2) By name and surname
+                0) Back
+                """);
+            String c = readLine("> ");
+            try {
+                switch (c) {
+                    case "1" -> {
+                        int id = readInt("ID: ");
+                        Student s = service.findStudentByID(id);
+                        if (s == null) {
+                            System.out.println("No student with ID " + id + ". Press Enter...");
+                            sc.nextLine();
+                            continue;
+                        }
+                        return s;
+                    }
+                    case "2" -> {
+                        String name = readLine("Name: ");
+                        String surname = readLine("Surname: ");
+                        return service.findStudentByNameAndSurname(name, surname);
+                    }
+                    case "0" -> { return null; }
+                    default -> System.out.println("Wrong choice. Press Enter...");
+                }
+            } catch (Exception ex) {
+                System.out.println("Error: " + ex.getMessage());
+                System.out.println("Press Enter...");
+                sc.nextLine();
+            }
+        }
     }
 }
