@@ -177,9 +177,13 @@ public class DanceSchoolService {
     public void removeLesson (LocalDateTime localDateTime, Room room) {
         Lesson lesson = findLesson(localDateTime, room);
         Course course = lesson.getCourse();
-        course.removeLesson(lesson);
-        lesson.setCourse(null);
-        school.getLessons().remove(lesson);
+        if (course == null) {
+            school.getLessons().remove(lesson);
+        } else {
+            course.removeLesson(lesson);
+            lesson.setCourse(null);
+            school.getLessons().remove(lesson);
+        }
 
     }
     public void removeCourse (String name, String level) {

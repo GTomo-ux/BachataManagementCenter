@@ -334,7 +334,7 @@ public class UserInterface {
             String c = readLine("> ");
             try {
                 switch (c) {
-                    case "1" -> { // Add student
+                    case "1" -> {
                         var s = service.addStudent(readLine("Name: "), readLine("Surname: "));
                         service.saveData();
                         System.out.println("Added: " + s); sc.nextLine();
@@ -348,11 +348,17 @@ public class UserInterface {
                     }
                     case "3" -> {
                         String name = readLine("Course name: ");
-                        String level = readLine("Level (e.g. Beginner/Intermediate): ");
-                        int limit = readInt("Limit: ");
-                        service.addCourse(new Course(name, level, limit));
-                        service.saveData();
-                        System.out.println("Added course."); sc.nextLine();
+                        CourseLevel courseLevel = readLevel("Level (e.g. Beginner/Intermediate): ");
+                        int limit = readInt("Limit of places (10-200): ");
+                        if (limit < 10 || limit > 200) {
+                            service.createAndAddCourse(name, courseLevel);
+                            service.saveData();
+                            System.out.println("Added course. Default limit has been set, because limit was out of scope."); sc.nextLine();
+                        } else {
+                            service.createAndAddCourse(name, courseLevel, limit);
+                            service.saveData();
+                            System.out.println("Added course."); sc.nextLine();
+                        }
                     }
                     case "4" -> {
                         System.out.println("Lesson start date:");
@@ -580,6 +586,25 @@ public class UserInterface {
     private String readLine(String prompt) {
         System.out.print(prompt);
         return sc.nextLine().trim();
+    }
+    private CourseLevel readLevel(String prompt) {
+        while (true) {
+            System.out.println(prompt);
+            String l = sc.nextLine().trim().toLowerCase();
+            if (l.equals("beginner") || l.equals("basic") || l.equals("intermediate") || l.equals("advance") || l.equals("open")) {
+                if (l.equals("beginner") || l.equals("basic")) {
+                    return CourseLevel.BEGINNER;
+                } else if (l.equals("intermediate")) {
+                    return CourseLevel.INTERMEDIATE;
+                } else if (l.equals("advance")) {
+                    return CourseLevel.ADVANCE;
+                } else if (l.equals("open")) {
+                    return CourseLevel.OPEN;
+                }
+            } else {
+                System.out.println("Wrong choice of level. Try again.");
+            }
+        }
     }
 
     private int readInt(String prompt) {
