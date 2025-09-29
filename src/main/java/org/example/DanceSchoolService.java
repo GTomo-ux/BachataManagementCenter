@@ -57,6 +57,9 @@ public class DanceSchoolService {
     public DanceSchool getSchool () {
         return this.school;
     }
+    public Map<Student, PaymentStrategy> getPaymentsByStudents () {
+        return this.paymentsByStudents;
+    }
 
     // Operacje na modelu, walidacje itd.
 
@@ -273,18 +276,24 @@ public class DanceSchoolService {
     // Płatności
     public void setSingleEntry(String name, String surname) {
         Student s = findStudentByNameAndSurname(name, surname);
-        paymentsByStudents.put(s, new SingleEntryPayment());
+        if (school.getStudents().contains(s)) {
+            paymentsByStudents.put(s, new SingleEntryPayment());
+        }
     }
     public void setPass(String name, String surname, int entries) {
         if (entries < 4) {
             throw new IllegalArgumentException("Number of entries must be at least 4.");
         }
         Student s = findStudentByNameAndSurname(name, surname);
-        paymentsByStudents.put(s, new PassPayment(entries));
+        if (school.getStudents().contains(s)) {
+            paymentsByStudents.put(s, new PassPayment(entries));
+        }
     }
     public void setMonthlyUnlimited(String name, String surname) {
         Student s = findStudentByNameAndSurname(name, surname);
-        paymentsByStudents.put(s, new MonthlyUnlimitedPayment());
+        if (school.getStudents().contains(s)) {
+            paymentsByStudents.put(s, new MonthlyUnlimitedPayment());
+        }
     }
 
     public double estimatePrice (String name, String surname) {

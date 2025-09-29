@@ -29,6 +29,7 @@ public class UserInterface {
             }
         }
         System.out.println("Bye!");
+        System.out.println("");
     }
 
     private Panel mainPanel() {
@@ -329,6 +330,7 @@ public class UserInterface {
                     10) Remove lesson from course
                     11) Remove student/instructor/course/lesson
                     12) Display student/instructor/course
+                    13) Payments
                     0) Back
                     """);
             String c = readLine("> ");
@@ -442,6 +444,56 @@ public class UserInterface {
                     case "12" -> {
                         adminViewPanel();
                     }
+                    case "13" -> {
+                        while (true) {
+                            clear();
+                            System.out.println("""
+                                === PAYMENTS ===
+                                1) Set single entry
+                                2) Set pass
+                                3) Set monthly unlimited
+                                0) Back
+                                """);
+                            String p = readLine("> ");
+                            switch (p) {
+                                case "1" -> {
+                                    System.out.print("Name: ");
+                                    String name = sc.nextLine();
+                                    System.out.print("Surname: ");
+                                    String surname = sc.nextLine();
+                                    service.setSingleEntry(name, surname);
+                                    System.out.println("Single entry has been set.");
+                                    sc.nextLine();
+                                }
+                                case "2" -> {
+                                    System.out.print("Name: ");
+                                    String name = sc.nextLine();
+                                    System.out.print("Surname: ");
+                                    String surname = sc.nextLine();
+                                    int limit = readInt("Limit: ");
+                                    service.setPass(name, surname, limit);
+                                    System.out.println("Pass has been set.");
+                                    sc.nextLine();
+                                }
+                                case "3" -> {
+                                    System.out.print("Name: ");
+                                    String name = sc.nextLine();
+                                    System.out.print("Surname: ");
+                                    String surname = sc.nextLine();
+                                    service.setMonthlyUnlimited(name, surname);
+                                    System.out.println("Monthly unlimited has been set.");
+                                    sc.nextLine();
+                                }
+                                case "0" -> {
+                                    return Panel.ADMIN;
+                                }
+                                default -> {
+                                    System.out.println("Wrong choice. Enter...");
+                                    sc.nextLine();
+                                }
+                            }
+                        }
+                    }
                     case "0" -> { return Panel.MAIN; }
                     default -> { System.out.println("Wrong choice. Enter..."); sc.nextLine(); }
                 }
@@ -506,7 +558,7 @@ public class UserInterface {
                     } else {
                         for (Student s : service.getSchool().getStudents()) {
                             System.out.println("-".repeat(50));
-                            System.out.println(s.getName() + " " + s.getSurname() + " (ID: " + s.getID() + ")");
+                            System.out.println(s.getName() + " " + s.getSurname() + " (ID: " + s.getID() + "), " + service.currentPaymentName(s.getName(), s.getSurname()));
                             if (s.getCourses().isEmpty()) {
                                 System.out.println("  • none");
                             } else {
@@ -659,7 +711,7 @@ public class UserInterface {
     }
     private void printStudentWithCourses(Student s) {
         clear();
-        System.out.println("Student: " + s.getName() + " " + s.getSurname() + " (ID: " + s.getID() + ")");
+        System.out.println("Student: " + s.getName() + " " + s.getSurname() + " (ID: " + s.getID() + "), " + service.currentPaymentName(s.getName(), s.getSurname()));
         System.out.println("Enrolled courses:");
         if (s.getCourses().isEmpty()) {
             System.out.println("  — none");
